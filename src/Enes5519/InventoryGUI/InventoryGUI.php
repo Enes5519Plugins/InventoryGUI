@@ -62,7 +62,9 @@ class InventoryGUI extends PluginBase implements Listener{
 		}
 
 		if($invAction !== null && $player !== null){
-			$player->getServer()->getPluginManager()->callEvent($ev = new InventoryClickEvent($player, $invAction->getInventory(), $invAction->getSourceItem(), $invAction->getSlot()));
+			/** @var FakeInventory $inv */
+			$inv = $invAction->getInventory();
+			$player->getServer()->getPluginManager()->callEvent($ev = new InventoryClickEvent($player, $inv, $invAction->getSourceItem(), $invAction->getSlot()));
 			$event->setCancelled($ev->isCancelled());
 		}
 	}

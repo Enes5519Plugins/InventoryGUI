@@ -23,15 +23,48 @@ declare(strict_types=1);
 
 namespace Enes5519\InventoryGUI;
 
+use Enes5519\InventoryGUI\event\InventoryClickEvent;
+use Enes5519\InventoryGUI\inventory\FakeInventory;
+use pocketmine\event\inventory\InventoryTransactionEvent;
+use pocketmine\event\Listener;
+use pocketmine\inventory\PlayerCursorInventory;
+use pocketmine\inventory\PlayerInventory;
+use pocketmine\inventory\transaction\action\SlotChangeAction;
 use pocketmine\plugin\PluginBase;
 
-class InventoryGUI extends PluginBase{
+class InventoryGUI extends PluginBase implements Listener{
 
 	/** @var InventoryGUI */
 	private static $api;
 
 	public function onLoad(){
 		self::$api = $this;
+	}
+
+	public function onEnable(){
+		$this->getServer()->getPluginManager()->registerEvents($this, $this);
+	}
+
+	public function onTransaction(InventoryTransactionEvent $event){
+		$actions = $event->getTransaction()->getActions();
+
+		$invAction = $player = null;
+
+		foreach($actions as $action){
+			if($action instanceof SlotChangeAction){
+				$inv = $action->getInventory();
+				if($inv instanceof FakeInventory){
+					$invAction = $action;
+				}elseif($inv instanceof PlayerInventory or $inv instanceof PlayerCursorInventory){
+					$player = $inv->getHolder();
+				}
+			}
+		}
+
+		if($invAction !== null && $player !== null){
+			$player->getServer()->getPluginManager()->callEvent($ev = new InventoryClickEvent($player, $invAction->getInventory(), $invAction->getSourceItem(), $invAction->getSlot()));
+			$event->setCancelled($ev->isCancelled());
+		}
 	}
 
 	/**

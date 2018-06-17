@@ -31,7 +31,6 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\network\mcpe\protocol\BlockEntityDataPacket;
 use pocketmine\Player;
 use pocketmine\tile\Chest;
-use pocketmine\tile\Tile;
 
 class DoubleChestInventory extends ChestInventory{
 
@@ -43,24 +42,18 @@ class DoubleChestInventory extends ChestInventory{
 		return 54;
 	}
 
-	public function sendFakeContainer(Player $player, CompoundTag $tag, bool $force = false) : void{
+	public function sendFakeContainer(Player $player, Vector3 $pos, bool $force = false) : void{
 		if(!$force){
 			// HACK
-			InventoryGUI::getAPI()->getScheduler()->scheduleDelayedTask(new DoubleChestDelayTask($this, $player, $tag, true), 5);
+			InventoryGUI::getAPI()->getScheduler()->scheduleDelayedTask(new DoubleChestDelayTask($this, $player, $pos, true), 5);
 			return;
 		}
 
-		parent::sendFakeContainer($player, $tag);
+		parent::sendFakeContainer($player, $pos);
 	}
 
-	public function sendFakeTile(Player $player, CompoundTag $tag) : void{
+	public function sendFakeTile(Player $player, CompoundTag $tag, Vector3 $pos) : void{
 		$writer = self::$nbtWriter ?? (self::$nbtWriter = new NetworkLittleEndianNBTStream());
-
-		$pos = new Vector3(
-			$tag->getInt(Tile::TAG_X),
-			$tag->getInt(Tile::TAG_Y),
-			$tag->getInt(Tile::TAG_Z)
-		);
 
 		$tag->setInt(Chest::TAG_PAIRX, $pos->x + 1);
 		$tag->setInt(Chest::TAG_PAIRZ, $pos->z);
@@ -81,17 +74,17 @@ class DoubleChestInventory extends ChestInventory{
 		$player->dataPacket($pk);
 	}
 
-	public function getRealBlocks(Player $player, int $x, int $y, int $z) : array{
+	public function getRealBlocks(Player $player, Vector3 $pos) : array{
 		return array_merge(
-			parent::getRealBlocks($player, $x, $y, $z),
-			[$player->level->getBlockAt($x + 1, $y, $z)]
+			parent::getRealBlocks($player, $pos),
+			[$player->level->getBlockAt($pos->x + 1, $pos->y, $pos->z)]
 		);
 	}
 
-	public function getFakeBlocks(int $x, int $y, int $z) : array{
+	public function getFakeBlocks(Vector3 $pos) : array{
 		return array_merge(
-			parent::getFakeBlocks($x, $y, $z),
-			[$this->entry->getBlock()->setComponents($x + 1, $y, $z)]
+			parent::getFakeBlocks($pos),
+			[$this->entry->getBlock()->setComponents($pos->x + 1, $pos->y, $pos->z)]
 		);
 	}
 

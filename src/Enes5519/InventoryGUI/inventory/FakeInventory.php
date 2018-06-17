@@ -26,6 +26,7 @@ namespace Enes5519\InventoryGUI\inventory;
 use Enes5519\InventoryGUI\FakeInventoryEntry;
 use pocketmine\block\Block;
 use pocketmine\inventory\BaseInventory;
+use pocketmine\math\Vector3;
 use pocketmine\nbt\NetworkLittleEndianNBTStream;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\StringTag;
@@ -74,54 +75,62 @@ abstract class FakeInventory extends BaseInventory{
 	public function onOpen(Player $player) : void{
 		parent::onOpen($player);
 
-		$nbt = $this->getNBT($player);
-		$this->sendBlocks($player, $nbt);
-		$this->sendFakeTile($player, $nbt);
-		$this->sendFakeContainer($player, $nbt);
+		$tag = $this->getNBT($player);
+		$pos = new Vector3(
+			$tag->getInt(Tile::TAG_X),
+			$tag->getInt(Tile::TAG_Y),
+			$tag->getInt(Tile::TAG_Z)
+		);
+
+		$this->sendBlocks($player, $pos);
+		$this->sendFakeTile($player, $tag, $pos);
+		$this->sendFakeContainer($player, $pos);
 	}
 
 	public function onClose(Player $player) : void{
 		parent::onClose($player);
 
-		$nbt = $this->getNBT($player);
-		$this->sendBlocks($player, $nbt, false);
+		$tag = $this->getNBT($player);
+		$pos = new Vector3(
+			$tag->getInt(Tile::TAG_X),
+			$tag->getInt(Tile::TAG_Y),
+			$tag->getInt(Tile::TAG_Z)
+		);
+		$this->sendBlocks($player, $pos, false);
 
 		$pk = new ContainerClosePacket();
 		$pk->windowId = $player->getWindowId($this);
 		$player->dataPacket($pk);
 	}
 
-	protected function sendBlocks(Player $player, CompoundTag $tag, bool $fake = true) : void{
-		$x = $tag->getInt(Tile::TAG_X);
-		$y = $tag->getInt(Tile::TAG_Y);
-		$z = $tag->getInt(Tile::TAG_Z);
+	protected function sendBlocks(Player $player, Vector3 $pos, bool $fake = true) : void{
 		if($fake){
-			$blocks = $this->getFakeBlocks($x, $y, $z);
+			$blocks = $this->getFakeBlocks($pos);
 		}else{
-			$blocks = $this->getRealBlocks($player, $x, $y, $z);
+			$blocks = $this->getRealBlocks($player, $pos);
 		}
 
 		$player->level->sendBlocks([$player], $blocks);
 	}
 
-	public function sendFakeTile(Player $player, CompoundTag $tag) : void{
-		$pk = new BlockEntityDataPacket();
-		$pk->x = $tag->getInt(Tile::TAG_X);
-		$pk->y = $tag->getInt(Tile::TAG_Y);
-		$pk->z = $tag->getInt(Tile::TAG_Z);
-
+	public function sendFakeTile(Player $player, CompoundTag $tag, Vector3 $pos) : void{
 		$writer = self::$nbtWriter ?? (self::$nbtWriter = new NetworkLittleEndianNBTStream());
+
+		$pk = new BlockEntityDataPacket();
+		$pk->x = $pos->x;
+		$pk->y = $pos->y;
+		$pk->z = $pos->z;
 		$pk->namedtag = $writer->write($tag);
 		$player->dataPacket($pk);
 	}
 
-	public function sendFakeContainer(Player $player, CompoundTag $tag) : void{
+	public function sendFakeContainer(Player $player, Vector3 $pos) : void{
 		$pk = new ContainerOpenPacket();
 		$pk->windowId = $player->getWindowId($this);
 		$pk->type = $this->getWindowType();
-		$pk->x = $tag->getInt(Tile::TAG_X);
-		$pk->y = $tag->getInt(Tile::TAG_Y);
-		$pk->z = $tag->getInt(Tile::TAG_Z);
+		$pk->x = $pos->x;
+		$pk->y = $pos->y;
+		$pk->z = $pos->z;
 		$player->dataPacket($pk);
 
 		$this->sendContents($player);
@@ -143,28 +152,23 @@ abstract class FakeInventory extends BaseInventory{
 
 	/**
 	 * @param Player $player
-	 * @param int $x
-	 * @param int $y
-	 * @param int $z
+	 * @param Vector3 $pos
 	 *
 	 * @return Block[]
 	 */
-	public function getRealBlocks(Player $player, int $x, int $y, int $z) : array{
+	public function getRealBlocks(Player $player, Vector3 $pos) : array{
 		return [
-			$player->level->getBlockAt($x, $y, $z)
+			$player->level->getBlockAt($pos->x, $pos->y, $pos->z)
 		];
 	}
 
 	/**
-	 * @param int $x
-	 * @param int $y
-	 * @param int $z
-	 *
+	 * @param Vector3 $pos
 	 * @return Block[]
 	 */
-	public function getFakeBlocks(int $x, int $y, int $z) : array{
+	public function getFakeBlocks(Vector3 $pos) : array{
 		return [
-			$this->entry->getBlock()->setComponents($x, $y, $z)
+			$this->entry->getBlock()->setComponents($pos->x, $pos->y, $pos->z)
 		];
 	}
 }

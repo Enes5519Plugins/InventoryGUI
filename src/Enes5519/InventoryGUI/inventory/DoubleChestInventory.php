@@ -25,9 +25,8 @@ namespace Enes5519\InventoryGUI\inventory;
 
 use Enes5519\InventoryGUI\task\DoubleChestDelayTask;
 use Enes5519\InventoryGUI\InventoryGUI;
-use pocketmine\math\Vector3;
+use pocketmine\level\Position;
 use pocketmine\nbt\NetworkLittleEndianNBTStream;
-use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\network\mcpe\protocol\BlockEntityDataPacket;
 use pocketmine\Player;
 use pocketmine\tile\Chest;
@@ -42,7 +41,7 @@ class DoubleChestInventory extends ChestInventory{
 		return 54;
 	}
 
-	public function sendFakeContainer(Player $player, Vector3 $pos, bool $force = false) : void{
+	public function sendFakeContainer(Player $player, Position $pos, bool $force = false) : void{
 		if(!$force){
 			// HACK
 			InventoryGUI::getAPI()->getScheduler()->scheduleDelayedTask(new DoubleChestDelayTask($this, $player, $pos, true), 5);
@@ -52,36 +51,36 @@ class DoubleChestInventory extends ChestInventory{
 		parent::sendFakeContainer($player, $pos);
 	}
 
-	public function sendFakeTile(Player $player, CompoundTag $tag, Vector3 $pos) : void{
+	public function sendFakeTile(Player $player, Position $pos) : void{
 		$writer = self::$nbtWriter ?? (self::$nbtWriter = new NetworkLittleEndianNBTStream());
 
-		$tag->setInt(Chest::TAG_PAIRX, $pos->x + 1);
-		$tag->setInt(Chest::TAG_PAIRZ, $pos->z);
+		$this->nbt->setInt(Chest::TAG_PAIRX, $pos->x + 1);
+		$this->nbt->setInt(Chest::TAG_PAIRZ, $pos->z);
 		$pk = new BlockEntityDataPacket();
 		$pk->x = $pos->x;
 		$pk->y = $pos->y;
 		$pk->z = $pos->z;
-		$pk->namedtag = $writer->write($tag);
+		$pk->namedtag = $writer->write($this->nbt);
 		$player->dataPacket($pk);
 
-		$tag->setInt(Chest::TAG_PAIRX, $pos->x);
-		$tag->setInt(Chest::TAG_PAIRZ, $pos->z);
+		$this->nbt->setInt(Chest::TAG_PAIRX, $pos->x);
+		$this->nbt->setInt(Chest::TAG_PAIRZ, $pos->z);
 		$pk = new BlockEntityDataPacket();
 		$pk->x = $pos->x + 1;
 		$pk->y = $pos->y;
 		$pk->z = $pos->z;
-		$pk->namedtag = $writer->write($tag);
+		$pk->namedtag = $writer->write($this->nbt);
 		$player->dataPacket($pk);
 	}
 
-	public function getRealBlocks(Player $player, Vector3 $pos) : array{
+	public function getRealBlocks(Position $pos) : array{
 		return array_merge(
-			parent::getRealBlocks($player, $pos),
-			[$player->level->getBlockAt($pos->x + 1, $pos->y, $pos->z)]
+			parent::getRealBlocks($pos),
+			[$pos->level->getBlockAt($pos->x + 1, $pos->y, $pos->z)]
 		);
 	}
 
-	public function getFakeBlocks(Vector3 $pos) : array{
+	public function getFakeBlocks(Position $pos) : array{
 		return array_merge(
 			parent::getFakeBlocks($pos),
 			[$this->entry->getBlock()->setComponents($pos->x + 1, $pos->y, $pos->z)]

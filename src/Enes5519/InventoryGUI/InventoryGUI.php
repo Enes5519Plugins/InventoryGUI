@@ -54,6 +54,9 @@ class InventoryGUI extends PluginBase implements Listener{
 			if($action instanceof SlotChangeAction){
 				$inv = $action->getInventory();
 				if($inv instanceof FakeInventory){
+					if($inv->isReadOnly()){
+						$event->setCancelled();
+					}
 					$invAction = $action;
 				}elseif($inv instanceof PlayerInventory or $inv instanceof PlayerCursorInventory){
 					$player = $inv->getHolder();

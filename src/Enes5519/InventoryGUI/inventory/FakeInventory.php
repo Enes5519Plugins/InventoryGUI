@@ -50,6 +50,8 @@ abstract class FakeInventory extends BaseInventory{
 	protected $entry;
 	/** @var CompoundTag */
 	protected $nbt;
+	/** @var bool */
+	protected $readOnly = false;
 
 	public function __construct(FakeInventoryEntry $entry){
 		$this->entry = $entry;
@@ -186,5 +188,20 @@ abstract class FakeInventory extends BaseInventory{
 		return [
 			$this->entry->getBlock()->setComponents($pos->x, $pos->y, $pos->z)
 		];
+	}
+
+	public function isReadOnly() : bool{
+		return $this->readOnly;
+	}
+
+	/**
+	 * @param bool $readOnly
+	 *
+	 * @return FakeInventory
+	 */
+	public function setReadOnly(bool $readOnly = true) : self{
+		$this->readOnly = $readOnly;
+
+		return $this;
 	}
 }
